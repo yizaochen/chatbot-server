@@ -19,14 +19,29 @@ app-run
 
 ## Alembic
 
-```bash
-alembic init alembic
-alembic revision --autogenerate -m "Add User Table"
-alembic upgrade head
-```
+### Initialize
 
 ```bash
-alembic revision --autogenerate -m "Add LLMModel and Assistant Tables"
+alembic init alembic
+```
+
+### alembic.ini
+
+```plaintext
+sqlalchemy.url = sqlite:///db/chat-server.sqlite
+```
+
+### alembic/env.py
+
+```python
+from app import models
+target_metadata = models.Base.metadata
+```
+
+### Migration
+
+```bash
+alembic revision --autogenerate -m "Initialize"
 alembic upgrade head
 ```
 
