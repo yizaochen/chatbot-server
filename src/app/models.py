@@ -74,6 +74,8 @@ class Assistant(Base):
 class Thread(Base):
     """
     Equivalent to a chat session in the chatbot.
+
+    name: The title of the thread (chat session).
     """
 
     __tablename__ = "threads"

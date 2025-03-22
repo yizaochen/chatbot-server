@@ -1,43 +1,32 @@
-from typing import AsyncIterable
-from dotenv import load_dotenv
+from fastapi import APIRouter, HTTPException
+from langchain_core.messages import HumanMessage
+from pydantic import BaseModel
+from app.ai_cores.bc_graph import chat_graph
 
-from fastapi import APIRouter
-from fastapi.responses import StreamingResponse
-
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser
-from langchain.chat_models import init_chat_model
+router = APIRouter(prefix="/chat", tags=["Chat"])
 
 
-load_dotenv()
+class ChatRequest(BaseModel):
+    thread_id: int
+    input_message: str
 
 
-async def send_message(chain, question: str) -> AsyncIterable[str]:
+@router.post("/")
+async def chat(request: ChatRequest):
+    # Prepare the configuration dynamically
+    config = {
+        "configurable": {
+            "thread_id": request.thread_id,
+        }
+    }
+
+    # Construct the user input message
+    input_message = HumanMessage(content=request.input_message)
+
+    # Invoke the chat model
     try:
-        async for token in chain.astream({"question": question}):
-            yield token
+        result = chat_graph.invoke({"messages": [input_message]}, config)
+        ai_message = result.get("messages")[-1].content
+        return {"message": ai_message}
     except Exception as e:
-        print(f"Caught exception: {e}")
-
-
-router = APIRouter(prefix="/api/chat", tags=["Chat"])
-llm = init_chat_model(model="gpt-4o-mini", model_provider="openai")
-prompt_rag = ChatPromptTemplate.from_messages(
-    [
-        (
-            "system",
-            "You are a chatbot designed to answer physics questions",
-        ),
-        ("human", "{question}"),
-    ]
-)
-
-
-@router.get("/stream")
-async def stream_llm_response(query: str):
-    chain = prompt_rag | llm | StrOutputParser()
-    generator = send_message(chain, query)
-    return StreamingResponse(generator, media_type="text/event-stream")
-
-
-# http://127.0.0.1:8000/api/chat/stream?query=Tell+me+a+story
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")

@@ -48,23 +48,6 @@ def get_chat_history(db: Session, thread_id: int) -> list[BaseMessage]:
     ]
 
 
-def ensure_thread_exists(db: Session, config: dict) -> Thread:
-    thread_id = config["configurable"]["thread_id"]
-    thread = db.query(Thread).filter(Thread.id == thread_id).first()
-    if thread:
-        return thread
-
-    new_thread = Thread(
-        id=thread_id,
-        user_id=config["configurable"]["user_id"],
-        assistant_id=config["configurable"]["assistant_id"],
-        name=config["configurable"].get("thread_name", "Untitled"),
-    )
-    db.add(new_thread)
-    db.commit()
-    return new_thread
-
-
 def add_messages(db: Session, thread_id: int, messages: list[BaseMessage]):
     message_objects = [
         Message(
@@ -97,21 +80,18 @@ builder.add_node("model", call_model)
 chat_graph = builder.compile()
 
 if __name__ == "__main__":
-    config = {
-        "configurable": {
-            "user_id": 1,
-            "assistant_id": 1,
-            "thread_id": 1,
-            "thread_name": "test",
-        }
-    }
+    config = {"configurable": {"thread_id": 1}}
 
-    for message_content in [
-        "Use my name to tell a story",
-        "use my name to tell a joke",
-    ]:
-        input_message = HumanMessage(content=message_content)
-        for event in chat_graph.stream(
-            {"messages": [input_message]}, config, stream_mode="values"
-        ):
-            event["messages"][-1].pretty_print()
+    # for message_content in [
+    #     "Use my name to tell a story",
+    #     "use my name to tell a joke",
+    # ]:
+    #     input_message = HumanMessage(content=message_content)
+    #     for event in chat_graph.stream(
+    #         {"messages": [input_message]}, config, stream_mode="values"
+    #     ):
+    #         event["messages"][-1].pretty_print()
+
+    input_message = HumanMessage(content="Where is Taipei?")
+    result = chat_graph.invoke({"messages": [input_message]}, config)
+    print(result.get("messages")[-1].content)
